@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ASHS House Leaderboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f8f6;
+    --card: #ffffff;
+    --border: #e5e4e0;
+    --text: #1a1a18;
+    --muted: #888780;
+    --faint: #b4b2a9;
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #085041;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  header img {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    object-fit: contain;
+    background: #f0f0ec;
+    padding: 3px;
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .header-text p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--green-light);
+    color: var(--green-dark);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  .live-dot.offline { background: var(--faint); animation: none; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  /* ── Layout ── */
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── Period toggle ── */
+  .toggle-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  .toggle {
+    display: flex;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px;
+  }
+
+  .toggle button {
+    border: none;
+    background: transparent;
+    padding: 7px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .toggle button.active {
+    background: var(--text);
+    color: #fff;
+  }
+
+  /* ── House cards grid ── */
+  .houses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .house-card {
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+    min-height: 130px;
+  }
+
+  .house-card-rank {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 22px;
+  }
+
+  .house-icon { font-size: 24px; }
+
+  .house-name {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 4px;
+  }
+
+  .house-pts {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-top: auto;
+  }
+
+  .house-pts-label {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-top: 2px;
+  }
+
+  /* ── Two-column section ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* ── Shared card shell ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .card-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .section-tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--green-light);
+    color: var(--green-dark);
+  }
+
+  /* ── Top students list ── */
+  .student-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .student-row:last-child { border-bottom: none; }
+
+  .student-rank {
+    font-size: 18px;
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .student-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .student-name {
+    font-size: 14px;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .student-house {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .student-pts {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+  }
+
+  /* ── Activity feed ── */
+  .activity-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .activity-row:last-child { border-bottom: none; }
+
+  .activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .activity-desc {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text);
+  }
+
+  .activity-desc strong {
+    font-weight: 600;
+  }
+
+  .activity-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  .activity-pts {
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── FERPA notice ── */
+  .ferpa-notice {
+    background: var(--green-light);
+    border: 1px solid #9FE1CB;
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--green-dark);
+    line-height: 1.6;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .ferpa-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Error bar ── */
+  .error-bar {
+    background: #FCEBEB;
+    color: #A32D2D;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    display: none;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--faint);
+    padding-bottom: 16px;
+  }
+
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── Skeleton loader ── */
+  .skeleton {
+    background: linear-gradient(90deg, #ebebea 25%, #f4f3f2 50%, #ebebea 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 6px;
+    height: 14px;
+  }
+
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="https://resources.finalsite.net/images/f_auto,q_auto,t_image_size_4/v1761755195/ashsfoundationorg/lu53wsukgfoabwecznau/AHSHCircleLogoCOLOR_NEW.png" alt="ASHS logo" />
+  <div class="header-text">
+    <h1>ASHS House Leaderboard</h1>
+    <p>Alabama School of Healthcare Science</p>
+  </div>
+  <div class="header-right">
+    <div class="live-badge" id="live-badge">
+      <div class="live-dot" id="live-dot"></div>
+      <span id="live-label">Loading</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="error-bar" id="error-bar"></div>
+
+  <div class="toggle-wrap">
+    <div class="toggle" role="tablist" aria-label="Leaderboard period">
+      <button class="active" data-period="year" role="tab" aria-selected="true" onclick="setPeriod('year')">All year</button>
+      <button data-period="month" role="tab" aria-selected="false" onclick="setPeriod('month')">This month</button>
+    </div>
+  </div>
+
+  <!-- House standings -->
+  <div class="houses-grid" id="houses-grid" aria-label="House standings" aria-live="polite">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- Top students + Activity feed -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <p class="card-title">Top students</p>
+          <p class="card-subtitle">Opted-in participants only</p>
+        </div>
+        <span class="section-tag">Consent on file</span>
+      </div>
+      <div id="students-list" aria-live="polite">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <p class="card-title">Recent activity</p>
+          <p class="card-subtitle">House-level highlights</p>
+        </div>
+        <span class="section-tag">House only</span>
+      </div>
+      <div id="activity-list" aria-live="polite">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="ferpa-notice">
+    <span class="ferpa-icon">🔒</span>
+    <span>
+      <strong>FERPA notice:</strong> This page displays house-level standings and aggregate points only.
+      Student names appear only with written parental or student consent on file with ASHS.
+      No grades, student IDs, or personally identifiable records are published here.
+      To opt in or out, contact the main office.
+    </span>
+  </div>
+
+  <footer>
+    Updates every 60 s &nbsp;·&nbsp; Last updated: <span id="last-updated">—</span>
+    &nbsp;·&nbsp; <a href="mailto:[school-email]">Contact us</a>
+  </footer>
+
+</main>
+
+<script>
+// ── Fallback data (replace with your real API endpoint) ──────────────────────
+const FALLBACK = {
+  refreshedAt: new Date().toISOString(),
+  houses: [
+    { id: 'aequitas',  name: 'Aequitas',  color: '#1E7A3E', icon: '⚖️', totalPoints: 1545, monthlyPoints: 238, rankYear: 1, rankMonth: 1 },
+    { id: 'empatia',   name: 'Empatia',   color: '#C0392B', icon: '❤️', totalPoints: 1480, monthlyPoints: 216, rankYear: 2, rankMonth: 2 },
+    { id: 'innovare',  name: 'Innovare',  color: '#1B3A6B', icon: '💡', totalPoints: 1392, monthlyPoints: 204, rankYear: 3, rankMonth: 3 },
+    { id: 'resolutia', name: 'Resolutia', color: '#374151', icon: '🛡️', totalPoints: 1318, monthlyPoints: 188, rankYear: 4, rankMonth: 4 },
+  ],
+  // Only students with PublicOptIn = true in Dataverse should appear here.
+  // Your Power Automate flow filters and truncates names to "First L." before writing this snapshot.
+  topStudents: [
+    { name: 'Jordan M.', house: 'Aequitas',  houseColor: '#1E7A3E', totalPoints: 312, monthlyPoints: 58, rankYear: 1, rankMonth: 1 },
+    { name: 'Priya K.',  house: 'Empatia',   houseColor: '#C0392B', totalPoints: 298, monthlyPoints: 61, rankYear: 2, rankMonth: 1 },
+    { name: 'Carlos R.', house: 'Innovare',  houseColor: '#1B3A6B', totalPoints: 275, monthlyPoints: 44, rankYear: 3, rankMonth: 3 },
+    { name: 'Aaliyah T.',house: 'Resolutia', houseColor: '#374151', totalPoints: 261, monthlyPoints: 52, rankYear: 4, rankMonth: 2 },
+    { name: 'Sam W.',    house: 'Aequitas',  houseColor: '#1E7A3E', totalPoints: 248, monthlyPoints: 39, rankYear: 5, rankMonth: 5 },
+  ],
+  recentActivity: [
+    { houseId: 'aequitas',  houseName: 'Aequitas',  houseColor: '#1E7A3E', icon: '⚖️', description: 'Earned points for volunteering at county health fair', points: 25, timestamp: '2026-06-13T10:00:00Z' },
+    { houseId: 'empatia',   houseName: 'Empatia',   houseColor: '#C0392B', icon: '❤️', description: 'Completed peer mentorship milestone', points: 20, timestamp: '2026-06-12T14:30:00Z' },
+    { houseId: 'innovare',  houseName: 'Innovare',  houseColor: '#1B3A6B', icon: '💡', description: 'Won the monthly STEM challenge', points: 30, timestamp: '2026-06-12T09:00:00Z' },
+    { houseId: 'resolutia', houseName: 'Resolutia', houseColor: '#374151', icon: '🛡️', description: 'Hosted wellness workshop for underclassmen', points: 20, timestamp: '2026-06-11T15:00:00Z' },
+    { houseId: 'aequitas',  houseName: 'Aequitas',  houseColor: '#1E7A3E', icon: '⚖️', description: 'Participated in community blood drive', points: 15, timestamp: '2026-06-11T11:00:00Z' },
+  ],
+};
+
+const MEDALS = ['🥇', '🥈', '🥉'];
+let period = 'year';
+let data = FALLBACK;
+
+// ── Replace this URL with your Power Automate / SharePoint snapshot URL ───────
+const SNAPSHOT_URL = '/api/leaderboard-public-snapshot';
+
+function setPeriod(p) {
+  period = p;
+  document.querySelectorAll('.toggle button').forEach(btn => {
+    const active = btn.dataset.period === p;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', String(active));
+  });
+  render();
+}
+
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function render() {
+  // Houses
+  const sorted = [...data.houses].sort((a, b) =>
+    (period === 'month' ? a.rankMonth : a.rankYear) - (period === 'month' ? b.rankMonth : b.rankYear)
+  );
+
+  document.getElementById('houses-grid').innerHTML = sorted.map((h, i) => `
+    <div class="house-card" style="background:${h.color}">
+      <span class="house-card-rank" aria-label="Rank ${i+1}">${MEDALS[i] ?? '#' + (i+1)}</span>
+      <span class="house-icon" aria-hidden="true">${h.icon}</span>
+      <p class="house-name">${h.name}</p>
+      <p class="house-pts">${(period === 'month' ? h.monthlyPoints : h.totalPoints).toLocaleString()}</p>
+      <p class="house-pts-label">${period === 'month' ? 'points this month' : 'points all year'}</p>
+    </div>
+  `).join('');
+
+  // Top students
+  const studentsSorted = [...data.topStudents].sort((a, b) =>
+    (period === 'month' ? a.rankMonth : a.rankYear) - (period === 'month' ? b.rankMonth : b.rankYear)
+  );
+
+  document.getElementById('students-list').innerHTML = studentsSorted.map((s, i) => `
+    <div class="student-row">
+      <span class="student-rank" aria-label="Rank ${i+1}">${MEDALS[i] ?? i+1}</span>
+      <div class="student-avatar" style="background:${s.houseColor}">${initials(s.name)}</div>
+      <div style="flex:1;min-width:0">
+        <p class="student-name">${s.name}</p>
+        <p class="student-house">${s.house}</p>
+      </div>
+      <p class="student-pts" style="color:${s.houseColor}">${(period === 'month' ? s.monthlyPoints : s.totalPoints).toLocaleString()}</p>
+    </div>
+  `).join('');
+
+  // Activity
+  document.getElementById('activity-list').innerHTML = data.recentActivity.map(a => `
+    <div class="activity-row">
+      <div class="activity-icon" style="background:${a.houseColor}22">
+        <span aria-hidden="true">${a.icon}</span>
+      </div>
+      <div class="activity-desc">
+        <strong>${a.houseName}</strong> ${a.description}
+        <p class="activity-meta">${timeAgo(a.timestamp)}</p>
+      </div>
+      <p class="activity-pts" style="color:${a.houseColor}">+${a.points}</p>
+    </div>
+  `).join('');
+
+  // Timestamp
+  document.getElementById('last-updated').textContent =
+    new Date(data.refreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+async function load() {
+  try {
+    const res = await fetch(SNAPSHOT_URL);
+    if (!res.ok) throw new Error('Could not load live data.');
+    data = await res.json();
+    document.getElementById('live-dot').className = 'live-dot';
+    document.getElementById('live-label').textContent = 'Live';
+    document.getElementById('error-bar').style.display = 'none';
+  } catch {
+    data = FALLBACK;
+    document.getElementById('live-dot').className = 'live-dot offline';
+    document.getElementById('live-label').textContent = 'Preview';
+    // Only show error bar after first failed live attempt
+    const bar = document.getElementById('error-bar');
+    bar.textContent = 'Showing preview data — live feed unavailable right now.';
+    bar.style.display = 'block';
+  }
+  render();
+}
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
