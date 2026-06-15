@@ -493,8 +493,63 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 let period = 'year';
 let data = FALLBACK;
 
-// ── Replace this URL with your Power Automate / SharePoint snapshot URL ───────
 const SNAPSHOT_URL = 'https://raw.githubusercontent.com/nseale-maker/ashs-leaderboard/main/leaderboard.json';
+
+// ── House icon + color map (Dataverse stores color names, not hex) ────────────
+const HOUSE_META = {
+  'Aequitas':  { color: '#1E7A3E', icon: '⚖️' },
+  'Empatia':   { color: '#C0392B', icon: '❤️' },
+  'Innovare':  { color: '#1B3A6B', icon: '💡' },
+  'Resolutia': { color: '#374151', icon: '🛡️' },
+};
+
+// ── Map raw Dataverse records to clean objects the page can use ───────────────
+function mapHouses(raw) {
+  return raw.map(h => {
+    const name = h.cre09_name || '';
+    const meta = HOUSE_META[name] || { color: '#666', icon: '🏠' };
+    return {
+      name,
+      color: meta.color,
+      icon: meta.icon,
+      totalPoints: h.cre09_totalpoints || 0,
+      monthlyPoints: h.cre09_monthlypoints || 0,
+    };
+  }).sort((a, b) => b.totalPoints - a.totalPoints);
+}
+
+function mapStudents(raw) {
+  return raw.map(s => {
+    const firstName = s.cre09_firstname || '';
+    const lastName = s.cre09_lastname || '';
+    const lastInitial = lastName ? lastName[0] + '.' : '';
+    const houseName = s['_cre09_house_value@OData.Community.Display.V1.FormattedValue'] || '';
+    const meta = HOUSE_META[houseName] || { color: '#666' };
+    return {
+      name: `${firstName} ${lastInitial}`,
+      house: houseName,
+      houseColor: meta.color,
+      totalPoints: s.cre09_totalpoints || 0,
+      monthlyPoints: s.cre09_monthlypoints || 0,
+    };
+  }).sort((a, b) => b.totalPoints - a.totalPoints);
+}
+
+function mapActivity(raw) {
+  return raw.map(a => {
+    const houseName = a['_cre09_house_value@OData.Community.Display.V1.FormattedValue'] || '';
+    const meta = HOUSE_META[houseName] || { color: '#666', icon: '🏠' };
+    const category = a['cre09_category@OData.Community.Display.V1.FormattedValue'] || 'Activity';
+    return {
+      houseName,
+      houseColor: meta.color,
+      icon: meta.icon,
+      description: `earned points for ${category.toLowerCase()}`,
+      points: a.cre09_pointsawarded || 0,
+      timestamp: a.cre09_transactiondate1 || a.createdon,
+    };
+  });
+}
 
 function setPeriod(p) {
   period = p;
@@ -519,12 +574,16 @@ function initials(name) {
 }
 
 function render() {
-  // Houses
-  const sorted = [...data.houses].sort((a, b) =>
-    (period === 'month' ? a.rankMonth : a.rankYear) - (period === 'month' ? b.rankMonth : b.rankYear)
+  const houses = data._mapped ? data.houses : mapHouses(data.houses || []);
+  const students = data._mapped ? data.topStudents : mapStudents(data.topStudents || []);
+  const activity = data._mapped ? data.recentActivity : mapActivity(data.recentActivity || []);
+
+  // Houses — sorted by points for selected period
+  const sortedHouses = [...houses].sort((a, b) =>
+    (period === 'month' ? b.monthlyPoints : b.totalPoints) - (period === 'month' ? a.monthlyPoints : a.totalPoints)
   );
 
-  document.getElementById('houses-grid').innerHTML = sorted.map((h, i) => `
+  document.getElementById('houses-grid').innerHTML = sortedHouses.map((h, i) => `
     <div class="house-card" style="background:${h.color}">
       <span class="house-card-rank" aria-label="Rank ${i+1}">${MEDALS[i] ?? '#' + (i+1)}</span>
       <span class="house-icon" aria-hidden="true">${h.icon}</span>
@@ -534,36 +593,40 @@ function render() {
     </div>
   `).join('');
 
-  // Top students
-  const studentsSorted = [...data.topStudents].sort((a, b) =>
-    (period === 'month' ? a.rankMonth : a.rankYear) - (period === 'month' ? b.rankMonth : b.rankYear)
+  // Top students — sorted by points for selected period
+  const sortedStudents = [...students].sort((a, b) =>
+    (period === 'month' ? b.monthlyPoints : b.totalPoints) - (period === 'month' ? a.monthlyPoints : a.totalPoints)
   );
 
-  document.getElementById('students-list').innerHTML = studentsSorted.map((s, i) => `
-    <div class="student-row">
-      <span class="student-rank" aria-label="Rank ${i+1}">${MEDALS[i] ?? i+1}</span>
-      <div class="student-avatar" style="background:${s.houseColor}">${initials(s.name)}</div>
-      <div style="flex:1;min-width:0">
-        <p class="student-name">${s.name}</p>
-        <p class="student-house">${s.house}</p>
-      </div>
-      <p class="student-pts" style="color:${s.houseColor}">${(period === 'month' ? s.monthlyPoints : s.totalPoints).toLocaleString()}</p>
-    </div>
-  `).join('');
+  document.getElementById('students-list').innerHTML = sortedStudents.length
+    ? sortedStudents.map((s, i) => `
+        <div class="student-row">
+          <span class="student-rank" aria-label="Rank ${i+1}">${MEDALS[i] ?? i+1}</span>
+          <div class="student-avatar" style="background:${s.houseColor}">${initials(s.name)}</div>
+          <div style="flex:1;min-width:0">
+            <p class="student-name">${s.name}</p>
+            <p class="student-house">${s.house}</p>
+          </div>
+          <p class="student-pts" style="color:${s.houseColor}">${(period === 'month' ? s.monthlyPoints : s.totalPoints).toLocaleString()}</p>
+        </div>
+      `).join('')
+    : '<p style="color:var(--muted);font-size:13px;padding:8px 0">No opted-in students yet.</p>';
 
-  // Activity
-  document.getElementById('activity-list').innerHTML = data.recentActivity.map(a => `
-    <div class="activity-row">
-      <div class="activity-icon" style="background:${a.houseColor}22">
-        <span aria-hidden="true">${a.icon}</span>
-      </div>
-      <div class="activity-desc">
-        <strong>${a.houseName}</strong> ${a.description}
-        <p class="activity-meta">${timeAgo(a.timestamp)}</p>
-      </div>
-      <p class="activity-pts" style="color:${a.houseColor}">+${a.points}</p>
-    </div>
-  `).join('');
+  // Activity feed
+  document.getElementById('activity-list').innerHTML = activity.length
+    ? activity.map(a => `
+        <div class="activity-row">
+          <div class="activity-icon" style="background:${a.houseColor}22">
+            <span aria-hidden="true">${a.icon}</span>
+          </div>
+          <div class="activity-desc">
+            <strong>${a.houseName}</strong> ${a.description}
+            <p class="activity-meta">${timeAgo(a.timestamp)}</p>
+          </div>
+          <p class="activity-pts" style="color:${a.houseColor}">+${a.points}</p>
+        </div>
+      `).join('')
+    : '<p style="color:var(--muted);font-size:13px;padding:8px 0">No recent activity yet.</p>';
 
   // Timestamp
   document.getElementById('last-updated').textContent =
@@ -574,15 +637,16 @@ async function load() {
   try {
     const res = await fetch(SNAPSHOT_URL);
     if (!res.ok) throw new Error('Could not load live data.');
-    data = await res.json();
+    const raw = await res.json();
+    // Store mapped flag so fallback data (already clean) isn't double-mapped
+    data = { ...raw, _mapped: false };
     document.getElementById('live-dot').className = 'live-dot';
     document.getElementById('live-label').textContent = 'Live';
     document.getElementById('error-bar').style.display = 'none';
   } catch {
-    data = FALLBACK;
+    data = { ...FALLBACK, _mapped: true };
     document.getElementById('live-dot').className = 'live-dot offline';
     document.getElementById('live-label').textContent = 'Preview';
-    // Only show error bar after first failed live attempt
     const bar = document.getElementById('error-bar');
     bar.textContent = 'Showing preview data — live feed unavailable right now.';
     bar.style.display = 'block';
