@@ -545,6 +545,7 @@ function mapActivity(raw) {
       houseColor: meta.color,
       icon: meta.icon,
       category,
+     description: `earned points for ${category.toLowerCase()}`,
       awardedBy: a.cre09_awardedby || '',
       comment: a.cre09_notes || '',
       points: a.cre09_pointsawarded || 0,
