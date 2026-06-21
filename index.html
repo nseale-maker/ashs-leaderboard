@@ -405,7 +405,7 @@
 
   <div class="toggle-wrap">
     <div class="toggle" role="tablist" aria-label="Leaderboard period">
-      <button class="active" data-period="year" role="tab" aria-selected="true" onclick="setPeriod('year')">All year</button>
+     <button class="active" data-period="month" role="tab" aria-selected="true" onclick="setPeriod('month')">This month</button>
       <button data-period="month" role="tab" aria-selected="false" onclick="setPeriod('month')">This month</button>
     </div>
   </div>
@@ -490,7 +490,7 @@ const FALLBACK = {
 };
 
 const MEDALS = ['🥇', '🥈', '🥉'];
-let period = 'year';
+let period = 'month';
 let data = FALLBACK;
 
 const SNAPSHOT_URL = 'https://raw.githubusercontent.com/nseale-maker/ashs-leaderboard/main/leaderboard.json';
@@ -521,12 +521,11 @@ function mapHouses(raw) {
 function mapStudents(raw) {
   return raw.map(s => {
     const firstName = s.cre09_firstname || '';
-    const lastName = s.cre09_lastname || '';
-    const lastInitial = lastName ? lastName[0] + '.' : '';
     const houseName = s['_cre09_house_value@OData.Community.Display.V1.FormattedValue'] || '';
     const meta = HOUSE_META[houseName] || { color: '#666' };
+
     return {
-      name: `${firstName} ${lastInitial}`,
+      name: firstName,
       house: houseName,
       houseColor: meta.color,
       totalPoints: s.cre09_totalpoints || 0,
@@ -585,7 +584,7 @@ function render() {
 
   document.getElementById('houses-grid').innerHTML = sortedHouses.map((h, i) => `
     <div class="house-card" style="background:${h.color}">
-      <span class="house-card-rank" aria-label="Rank ${i+1}">${MEDALS[i] ?? '#' + (i+1)}</span>
+      <span class="house-card-rank" aria-label="Rank ${i+1}"> ${MEDALS[i] || ''} </span>
       <span class="house-icon" aria-hidden="true">${h.icon}</span>
       <p class="house-name">${h.name}</p>
       <p class="house-pts">${(period === 'month' ? h.monthlyPoints : h.totalPoints).toLocaleString()}</p>
