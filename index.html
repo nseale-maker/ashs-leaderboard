@@ -585,6 +585,28 @@ function render() {
   const sortedHouses = [...houses].sort((a, b) =>
     (period === 'month' ? b.monthlyPoints : b.totalPoints) - (period === 'month' ? a.monthlyPoints : a.totalPoints)
   );
+document.getElementById('houses-grid').innerHTML = sortedHouses.map((h, i) => `
+  <div class="house-card" style="background:${h.color}">
+    <span class="house-card-rank" aria-label="Rank ${i+1}">
+      ${MEDALS[i] || ''}
+    </span>
+
+    <span class="house-icon" aria-hidden="true">${h.icon}</span>
+
+    <p class="house-name">${h.name}</p>
+
+    <p class="house-pts">
+      ${(period === 'month' ? h.monthlyPoints : h.totalPoints).toLocaleString()}
+    </p>
+
+    <p class="house-pts-label">
+      ${period === 'month'
+        ? 'points this month'
+        : 'points all year'}
+    </p>
+  </div>
+`).join('');
+ 
 
   document.getElementById('activity-list').innerHTML = activity.length
   ? activity.map(a => `
