@@ -539,11 +539,14 @@ function mapActivity(raw) {
     const houseName = a['_cre09_house_value@OData.Community.Display.V1.FormattedValue'] || '';
     const meta = HOUSE_META[houseName] || { color: '#666', icon: '🏠' };
     const category = a['cre09_category@OData.Community.Display.V1.FormattedValue'] || 'Activity';
+
     return {
       houseName,
       houseColor: meta.color,
       icon: meta.icon,
-      description: `earned points for ${category.toLowerCase()}`,
+      category,
+      awardedBy: a.cre09_awardedby || '',
+      comment: a.cre09_notes || '',
       points: a.cre09_pointsawarded || 0,
       timestamp: a.cre09_transactiondate1 || a.createdon,
     };
@@ -582,15 +585,39 @@ function render() {
     (period === 'month' ? b.monthlyPoints : b.totalPoints) - (period === 'month' ? a.monthlyPoints : a.totalPoints)
   );
 
-  document.getElementById('houses-grid').innerHTML = sortedHouses.map((h, i) => `
-    <div class="house-card" style="background:${h.color}">
-      <span class="house-card-rank" aria-label="Rank ${i+1}"> ${MEDALS[i] || ''} </span>
-      <span class="house-icon" aria-hidden="true">${h.icon}</span>
-      <p class="house-name">${h.name}</p>
-      <p class="house-pts">${(period === 'month' ? h.monthlyPoints : h.totalPoints).toLocaleString()}</p>
-      <p class="house-pts-label">${period === 'month' ? 'points this month' : 'points all year'}</p>
-    </div>
-  `).join('');
+  document.getElementById('activity-list').innerHTML = activity.length
+  ? activity.map(a => `
+      <div class="activity-row">
+        <div class="activity-icon" style="background:${a.houseColor}22">
+          <span aria-hidden="true">${a.icon}</span>
+        </div>
+
+        <div class="activity-desc">
+          <strong>${a.houseName}</strong> earned points for ${a.category}
+
+          ${a.comment ? `
+            <div style="
+              margin-top:6px;
+              padding:6px 8px;
+              background:#f6f6f4;
+              border-radius:8px;
+              font-style:italic;
+            ">
+              "${a.comment}"
+            </div>
+          ` : ''}
+
+          <p class="activity-meta">
+            Awarded by: ${a.awardedBy || 'Staff Member'} • ${timeAgo(a.timestamp)}
+          </p>
+        </div>
+
+        <p class="activity-pts" style="color:${a.houseColor}">
+          +${a.points}
+        </p>
+      </div>
+    `).join('')
+  : '<p style="color:var(--muted);font-size:13px;padding:8px 0">No recent activity yet.</p>';
 
   // Top students — sorted by points for selected period
   const sortedStudents = [...students].sort((a, b) =>
