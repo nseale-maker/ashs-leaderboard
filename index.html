@@ -631,7 +631,7 @@ document.getElementById('houses-grid').innerHTML = sortedHouses.map((h, i) => `
           ` : ''}
 
           <p class="activity-meta">
-            Awarded by: ${a.awardedBy || 'Staff Member'} • ${timeAgo(a.timestamp)}
+            ${timeAgo(a.timestamp)}
           </p>
         </div>
 
